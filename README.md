@@ -4,7 +4,7 @@ So during my semester break in 2021, I decided to spend my free time learning ho
 In Dataquest, there are some challenging Guided Projects which helps you to learn based on available datasets. Some of the projects are harder than the other, but overall it did the job of teaching you how to clean, analyse, and visualize a certain data. I am happy to share some of my works with you. I have to admit, I could not do it without the help of the supportive community they have over there.
 Enough jibber-jabber, please enjoy exploring my works :)
 
-1. [Exploring eBay Car Sales Data](https://github.com/dennisjooo/dqguidedprojects/tree/main/Exploring%20eBay%20Car%20Sales%20Data)
+1. [Exploring eBay Car Sales Data](https://github.com/dennisjooo/dqguidedprojects/tree/main/Exploring%20eBay%20Car%20Sales%20Data/Exploring%20eBay%20Car%20Sales%20Data.ipynb)
 2. [Visualizing Earnings Based On College Majors](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20Earnings%20Based%20On%20College%20Majors)
 3. [Visualizing The Gender Gap In College Degrees](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20The%20Gender%20Gap%20In%20College%20Degrees)
 4. [Clean And Analyze Employee Exit Surveys](https://github.com/dennisjooo/dqguidedprojects/tree/main/Clean%20And%20Analyze%20Employee%20Exit%20Surveys)
