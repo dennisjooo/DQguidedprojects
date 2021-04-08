@@ -4,6 +4,7 @@ So during my semester break in 2021, I decided to spend my free time learning ho
 In Dataquest, there are some challenging Guided Projects which helps you to learn based on available datasets. Some of the projects are harder than the other, but overall it did the job of teaching you how to clean, analyse, and visualize a certain data. I am happy to share some of my works with you. I have to admit, I could not do it without the help of the supportive community they have over there.
 Enough jibber-jabber, please enjoy exploring my works :)
 
+### Python
 1. [Exploring eBay Car Sales Data](https://github.com/dennisjooo/dqguidedprojects/tree/main/Exploring%20eBay%20Car%20Sales%20Data/Exploring%20eBay%20Car%20Sales%20Data.ipynb)
 2. [Visualizing Earnings Based On College Majors](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20Earnings%20Based%20On%20College%20Majors/Visualizing%20Earnings%20Based%20On%20College%20Majors.ipynb)
 3. [Visualizing The Gender Gap In College Degrees](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20The%20Gender%20Gap%20In%20College%20Degrees/Visualizing%20The%20Gender%20Gap%20In%20College%20Degrees.ipynb)
@@ -24,3 +25,5 @@ Enough jibber-jabber, please enjoy exploring my works :)
 18. [Predicting Bike Rentals](https://github.com/dennisjooo/dq-guided-project/blob/main/Predicting%20Bike%20Rentals/Predicting%20Bike%20Rentals.ipynb)
 19. [Building a Hand Written Digits Classifier](https://github.com/dennisjooo/dq-guided-project/blob/main/Building%20A%20Handwritten%20Digits%20Classifier/Building%20A%20Handwritten%20Digits%20Classifier.ipynb)
 20. [Creating a Kaggle Workflow](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20a%20Kaggle%20Workflow/Creating%20a%20Kaggle%20Workflow.ipynb)
+
+### R
