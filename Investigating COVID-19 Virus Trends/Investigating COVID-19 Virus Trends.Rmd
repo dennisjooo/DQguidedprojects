@@ -1,0 +1,147 @@
+---
+title: "Investigating COVID-19 Virus Trends"
+author: "Dennis Jonathan"
+date: "4/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduction
+A pneumonia of unknown cause detected in Wuhan, China was first internationally reported from China on 31 December 2019. Today we know this virus as Coronavirus. COVID-19 which stands for COronaVIrus Disease is the disease caused by this virus. Since then, the world has been engaged in the fight against this pandemic. Several measures have therefore been taken to "flatten the curve". We have consequently experienced social distancing and many people have passed away as well.
+
+In the solidarity to face this unprecedented global crisis, several organizations did not hesitate to share several datasets allowing the conduction of several kinds of analysis in order to understand this pandemic.
+
+In this exercise, we use [a dataset, from Kaggle](https://www.kaggle.com/lin0li/covid19testing), that we have prepared and made [available here for download](https://dq-content.s3.amazonaws.com/505/covid19.csv). This dataset was collected between the 20th of January and the 1st of June 2020.
+
+For this exercise, we will find out which countries have had the highest number of positive cases against the number of tests. To do it first, we will need to import the data set and do some exploration.
+```{r dataimport}
+#Shutting off warning messages
+options(warn=-1)
+
+library(tidyverse)
+#Importing the dataset
+df<-read.csv('covid19.csv')
+```
+### Data Exploration
+We will do some data exploration by finding the dimension of the dataframe and also catching a glimpse of the dataframe and its datatypes for each column.
+```{r dataexplore}
+#Determining the dimension
+dim(df)
+
+#Getting the column names into a vector
+vector_cols<-colnames(df)
+
+#Previewing vector_cols
+vector_cols
+
+#Displaying the first 5 rows of the data
+head(df,5)
+
+#Using glimpse to gain some understanding of the data
+glimpse(df)
+```
+As we can see, the dataframe contains 10,903 rows and 14 columns. We have also storred the name for each columns in a vector called `vector_cols`. Glimpse also provides us a quick summary of the data we will be working on. We can clearly see that most of the columns contains integers with the exception of columns which describes names of a location or the date.
+
+### Data Cleaning
+We will only use data where `Province_state` is 'All States'. In doing this, we are aware that there is a chance some data will be lost in the process, but it also reduces bias since we are only analyzing data from a country (e.g. South Korea is counted as All State but it seems as if the US have data for each states). We will then remove `Province_State` from the dataframe since it is no longer useful for us.
+```{r filtering}
+#Filtering the data where Province_State is not all state
+filtered_df<-df%>%filter(Province_State=='All States')
+
+#Removing Province_State from filtered_df
+filtered_df<-filtered_df%>%select(-Province_State)
+
+#Previewing the result
+head(filtered_df)
+
+#Getting the new dimension
+dim(filtered_df)
+```
+We will now try and separate cummulative data and daily data. For this exercise, we will try and analyse the daily data, thus we will only select columns such as:
+
+* Date - the date the data was collected
+* Country_Region - country names
+* active - number of active Cases that day
+* hospitalizedCurr - number of people hospitalized that day
+* daily_tested - number of people tested that day
+* daily_positive - number of positive test results that day
+```{r filtering2}
+#Selecting only the columns we need
+daily_df<-filtered_df%>%select(Date,Country_Region,active,hospitalizedCurr,daily_tested,daily_positive)
+
+#Previewing the result
+head(daily_df)
+```
+### Data Analysis
+```{r da1}
+#Aggregating the data and finding the sum based on the country
+top10<-daily_df%>%
+  group_by(Country_Region)%>%
+  summarize(
+    tested=sum(daily_tested),
+    positive=sum(daily_positive),
+    active=sum(active),
+    hospitalized=sum(hospitalizedCurr)
+  )%>%
+  arrange(-tested)
+#Previewing the top 10
+covid_top_10<-head(top10,10)
+covid_top_10
+```
+As we can see, the united states has the most people tested on a daily basis and the number of positive cases is also the highest in the 10 countries which has the most people tested. Australia has the least amount of positive cases in this top 10 lists. Oddly enough, there are 0s in both the `active` and `hospitalized` columns.
+```{r da2}
+#Creating vectors for each column
+countries<-covid_top_10$Country_Region
+tested_cases<-covid_top_10$tested
+positive_cases<-covid_top_10$positive
+active_cases<-covid_top_10$active
+hospitalized_cases<-covid_top_10$hospitalized
+
+#Naming the vectors
+names(positive_cases) <- countries
+names(tested_cases) <- countries
+names(active_cases) <- countries
+names(hospitalized_cases) <- countries
+
+#Calculating positive/tested ratio
+ptrat<-positive_cases/tested_cases
+
+#Finding countries with top 3 ratio
+top_3_rat<-head(sort(ptrat,decreasing=T),3)
+top_3_rat
+```
+The countries with the 3 highest positive to tested ratio are the United Kingdom, United States, and Turkey in the descending order. We will now try and append the ratio to the original dataframe, and then select those three countries again.
+```{r da3}
+#Appending ratio and sorting the dataframe by ratio
+covid_top_10['Ratio']<-ptrat
+covid_top_10<-covid_top_10[order(-covid_top_10$Ratio),]
+covid_top_10
+
+#Reselecting the top 3 countries
+top_3<-head(covid_top_10,3)
+top_3
+```
+After doing just that we will try and answer our original question. We will then store everything into a neat litttle list.
+```{r da4}
+#Answering the question
+question <- "Which countries have had the highest number of positive cases against the number of tests?"
+answer <- c("Positive tested cases" = top_3)
+
+#Creating a list for the dataset
+dataset<-list(original=df,allstate=filtered_df,daily=daily_df)
+
+#Creating a list for the vectors
+vectors<-list(vector_cols,countries)
+
+#Creating a list for the data structure
+dat_str<-list('dataframe'=dataset,'vector'=vectors)
+
+#Combining the question, answers and the data structure
+com<-list(question,answer,dat_str)
+
+#Previewing the answer
+com[[2]]
+```
