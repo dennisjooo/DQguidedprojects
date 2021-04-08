@@ -27,3 +27,4 @@ Enough jibber-jabber, please enjoy exploring my works :)
 20. [Creating a Kaggle Workflow](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20a%20Kaggle%20Workflow/Creating%20a%20Kaggle%20Workflow.ipynb)
 
 ### R
+1. [Investigationg COVID-19 Virus Trends](https://github.com/dennisjooo/dq-guided-project/blob/main/Investigating%20COVID-19%20Virus%20Trends/Investigating%20COVID-19%20Virus%20Trends.Rmd)
