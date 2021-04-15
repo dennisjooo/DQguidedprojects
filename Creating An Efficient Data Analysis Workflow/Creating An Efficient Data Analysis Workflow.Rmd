@@ -1,0 +1,124 @@
+---
+title: "Creating An Efficient Data Analysis Workflow"
+author: "Dennis Jonathan"
+date: "4/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+we will be acting as a data analyst for a company that sells books for learning programming. Your company has produced multiple books, and each has received many reviews. Your company wants us to check out the sales data and see if we can extract any useful information from it. The data set we will be using is available [here](https://data.world/dataquest/book-reviews).
+
+### Prerequisites
+
+```{r prereqs}
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing tidyverse
+library(tidyverse)
+
+# Importing the data set
+df<-read_csv('book_reviews.csv')
+
+# Previewing the first five data
+head(df)
+```
+
+### Initial Exploration
+Now we will try and familiarize ourselves with the data we have been bestowed upon. We will be finding out how big the data is, the names of the columns in our data, the type for each columns, and last is finding out the unique values for each column
+
+```{r i_explore}
+# Finding the dimension of the data
+dim(df)
+
+# Finding the names of the column
+colnames(df)
+
+# Finding the datatype for each column
+for (col in colnames(df)){
+  cat('Type for', col, 'is', typeof(df[[col]]), '\n')
+}
+# Finding the unique values for each column
+for (col in colnames(df)){
+  cat('The unique value for',col,':',unique(df[[col]]),'\n')
+}
+```
+As we can see, the data set contains 2000 rows and 4 columns. Those columns are: 
+
+* book - The book's title
+* review - Review score given for the book
+* state - The state where the book was purchased
+* price - The cost for the book
+
+### Data Cleaning
+After previewing the unique values, we can see that our data contains NA, which means it contains no value or missing value. NAs are not ideal in our data analysis process, thus we have to deal with it. Some options are dropping it entirely or filling the column with either the mean or in this case since the NA is in a string-based column, with the mode. For this exercise, we will try and drop the rows which contains NA.
+```{r datacleaning}
+# Finding the sum of missing values in each column
+temp<-c()
+for (col in colnames(df)){
+  temp[col]=sum(is.na(df[[col]]))
+}
+print(temp)
+```
+As we can see, there are 206 NA values in the column `review`. Since our data contains 2000 rows, we are justified to drop around 10% of the data.
+```{r datacleaning2}
+# Dropping the nan
+filtered_df <- df %>%filter(!is.na(df$review))
+
+# Getting the final dimension of the data
+dim(filtered_df)
+```
+The number of rows has dropped by the amount that we have determined previously. Now we still have some work to do, particularly converting the values in some columns. The column `state` contains some inconsistent labeling, for example the state of Texas is represented by both 'TX' and 'Texas'. We will need to convert them into one unified value, for this exercise, we will use the two letter format or commonly called as postal code.
+```{r datacleaning3}
+# Changing inconsistent values
+filtered_df<-filtered_df %>% mutate(
+  state=case_when(
+      state == "California" ~ "CA",
+      state == "New York" ~ "NY",
+      state == "Texas" ~ "TX",
+      state == "Florida" ~ "FL",
+      TRUE ~ state # ignore cases where it's already postal code
+    )
+    
+  )
+
+# Previewing the change
+cat('The unique value for state',':',unique(filtered_df[['state']]),'\n')
+```
+Now the last cleaning that we have to do is converting the `review` column into numerical data since it is hard for us to get any analysis done when the values are in the current format. We will use a scale of 1 to 5,  where 'Poor' will be represented by 1 and 'Excellent' will be 5. We will also try and create a new column in which it indicates whether a book is regarded highly or not. For the sake of this exercise, a highly regarded book is a book which have a review of higher or equal to 4.
+```{r datacleaning4}
+filtered_df<-filtered_df %>% mutate(
+  review=case_when(
+      review == "Excellent" ~ 5,
+      review == "Great" ~ 4,
+      review == "Good" ~ 3,
+      review == "Fair" ~ 2,
+      review == "Poor" ~ 1
+    ),
+  high_regard = if_else(review >= 4, TRUE, FALSE)
+  )
+
+# Previewing the change
+cat('The unique value for review',':',unique(filtered_df[['review']]),'\n')
+```
+### Analysis of the Most Profitable Book
+We will now determine which book is the most profitable for us. We will aggregate it based on the `book` column and then count the number of books sold as well as the total revenue from that particular book.
+
+```{r analysis}
+analysis <- filtered_df %>%
+  group_by(book) %>%
+  summarize(
+    purchased = n(),
+    price = mean(price),
+    review = mean(review),
+    revenue = price * purchased
+  ) %>%
+  arrange(-purchased)
+
+print(analysis)
+    
+```
+We can see that the best selling book out of all is 'Fundamentals of R For Beginners' with 366 copies sold, but the book which yield the most revenue of all is 'Secrets Of R For Advanced Students'. The main reason why 'Fundamentals of R for Beginners' yield less revenue compared to 'Secrets of R for Advanced Students' is the difference in price of the book. All the books have similar review scores.
