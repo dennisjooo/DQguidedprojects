@@ -28,3 +28,4 @@ Enough jibber-jabber, please enjoy exploring my works :)
 
 ### R
 1. [Investigationg COVID-19 Virus Trends](https://github.com/dennisjooo/dq-guided-project/blob/main/Investigating%20COVID-19%20Virus%20Trends/Investigating%20COVID-19%20Virus%20Trends.Rmd)
+2. [Creating An Efficient Data Analysis Workflow](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20An%20Efficient%20Data%20Analysis%20Workflow/Creating%20An%20Efficient%20Data%20Analysis%20Workflow.Rmd)
