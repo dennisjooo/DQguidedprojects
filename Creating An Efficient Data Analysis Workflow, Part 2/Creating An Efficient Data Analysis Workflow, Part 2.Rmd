@@ -1,0 +1,153 @@
+---
+title: "Creating An Efficient Data Analysis Workflow, Part 2"
+author: "Dennis Jonathan"
+date: "4/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this exercise, we are taking on the role of as an analyst for a book company. The company has provided us more data on some of its 2019 book sales, and it wants us to extract some usable knowledge from it. It launched a new program encouraging customers to buy more books on July 1st, 2019, and it wants to know if this new program was successful at increasing sales and improving review quality.
+
+The dataset is available to download [here](https://data.world/dataquest/book-sales-data). Now let's start!
+
+### Prerequisites
+``` {r prereqs}
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing tidyverse
+library(tidyverse)
+
+# Importing lubridate
+library(lubridate)
+
+# Importing our dataset
+df <- read_csv('sales2019.csv')
+```
+
+### Initial Exploration
+``` {r ie1}
+# Previewing the first five data
+head(df,5)
+```
+We can see the first five entries in our dataset above, now we will try and find the dimension of the dataframe as well as finding the datatype for each columns and a quick preview of the data we are expecting.
+``` {r ie2}
+# Finding the dimension of the data
+dim(df)
+
+# Finding the column types
+glimpse(df)
+```
+The data we are working with have 5,000 rows and 5 columns. The columns are :
+
+* date
+* user_submitted_review
+* title
+* total_purchased
+* customer_type
+
+From this initial exploration, we can see that the column `date` can be converted into datetime data type by using the `lubridate` library. It follows the pattern of MM/DD/YY thus we will be using the `mdy` function. We can also see that there are indeed columns with NA values. We will investigate those columns further.
+
+```{r ie3}
+# Finding the sum of missing values in each column
+temp<-c()
+for (col in colnames(df)){
+  temp[col]=sum(is.na(df[[col]]))
+}
+print(temp)
+```
+It seems like only two columns have NA values, those are `user_submitted_review` and `total_purchased`. Since we cannot infer anything from `user_submitted_review`, we will have to drop the rows which contains missing values in that column. `total_purchased` on the other hand is different, we can guestimate the missing values by using the mean.
+
+### Data Cleaning
+```{r datacleaning1}
+# Dropping the nan in user_submitted_review
+filtered_df <- df %>%filter(!is.na(df$user_submitted_review))
+
+# Getting the final dimension of the data
+dim(filtered_df)
+
+# Calculate the mean of the total_purchased column, without the missing values
+purchase_mean <- filtered_df %>% 
+  filter(!is.na(total_purchased)) %>% 
+  pull(total_purchased) %>% 
+  mean
+
+# Filling the nan in total_purchased
+filtered_df <- filtered_df %>% mutate(
+  total_purchased=if_else(is.na(total_purchased),purchase_mean,total_purchased)
+)
+```
+After dropping the NA values from `user_submitted_review` our data entries drop from 5,000 to 4,115 or roughly 18% of our data size. We also managed to fill the missing values in `total_purchased` with the mean value (roughly equals to 4). We will now convert the `date` column into date type.
+
+``` {r datacleaning2}
+filtered_df <- filtered_df %>% mutate(
+  date= as.Date(date, format= "%m/%d/%y")
+)
+```
+### Analysis
+
+#### 1. Processing review data
+We will now try and process the data on `user_submitted_review` column to decide whether the review indicates a positive or negative feedback. To do this we will need the help of a function.
+```{r a1}
+# Writing a function to check the review
+is_pos <- function(review){
+ review_positive = case_when(
+  str_detect(review, "Awesome") ~ TRUE,
+  str_detect(review, "OK") ~ TRUE,
+  str_detect(review, "Never") ~ TRUE,
+  str_detect(review, "a lot") ~ TRUE,
+  TRUE ~ FALSE # The review did not contain any of the above phrases
+  )
+}
+# Creating a new column to with the result of the function above
+filtered_df <- filtered_df %>% mutate(
+  is_positive = unlist(map(user_submitted_review,is_pos))
+)
+```
+### 2. Categorizing the data based on date
+We can finally make a move towards answering the main question of the analysis, Was the new book program effective in increasing book sales? The program started on July 1st, 2019, and the data you have contains all of the sales for 2019. To do this, we can create a column that describes whether the row is before or after July 1st,2019.
+```{r a2}
+# Filtering the data based on date
+filtered_df <- filtered_df %>% mutate(
+  date_stat = if_else(date<mdy('07-01-2019'),'before','after')
+)
+# Creating a summary of the data
+filtered_df %>% group_by(date_stat) %>% summarize(
+  rounded_total_puchased = round(sum(total_purchased),0)
+)
+```
+Based on the summary table above, we can clearly see that there is no increase in sales after the program was started.In fact, there is a decrease in sales, but the decrease itself is not that a big one. We can find out whether a particular book actually benefited from the program. 
+
+```{r a2.2}
+# Creating a summary of the data
+filtered_df %>% group_by(title,date_stat) %>% summarize(
+  rounded_total_puchased = round(sum(total_purchased),0)
+)%>% arrange(title, date_stat)
+```
+The table above confirms our suspicion that there is practically no effect from the program. The only book that has an increase in sale is 'R For Dummies'
+
+### 3. Categorizing the data based on customer type
+We will now analyze whether there is an increase in sale based on a particular customer segmentation before and after the program
+```{r a3}
+# Creating a summary of the data
+filtered_df %>% group_by(customer_type,date_stat) %>% summarize(
+  rounded_total_puchased = round(sum(total_purchased),0)
+)%>% arrange(customer_type, date_stat)
+```
+The program increases the book purchase from businesses but at the same time it decreases the individual book purchase.
+
+#### 4. Is there an increase in review sentiment after the program?
+Pretty much what the subtitle said, we will see whether there is an increase in positive review before and after the program began.
+``` {r a4}
+# Creating a summary of the data
+filtered_df %>% group_by(date_stat) %>% summarize(
+  positive_reviews = round(sum(is_positive),0)
+)%>% arrange(date_stat)
+```
+After the program started, we can clearly see that there is a slight increase in positive reviews. By slight, it's an increase by 3 reviews.
+
+### Conclusion
+We can clearly see that the newly introduced program which began on July 1st, 2019 does not succeed in increasing sales number, but it does increase the number of positive reviews. The program also sees an increase in business purchases. It is highly recommended to tweak the program should we decide to target other segment or require more sales.
