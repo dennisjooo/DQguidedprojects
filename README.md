@@ -5,6 +5,7 @@ In Dataquest, there are some challenging Guided Projects which helps you to lear
 Enough jibber-jabber, please enjoy exploring my works :)
 
 ### Python
+---
 1. [Exploring eBay Car Sales Data](https://github.com/dennisjooo/dqguidedprojects/tree/main/Exploring%20eBay%20Car%20Sales%20Data/Exploring%20eBay%20Car%20Sales%20Data.ipynb)
 2. [Visualizing Earnings Based On College Majors](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20Earnings%20Based%20On%20College%20Majors/Visualizing%20Earnings%20Based%20On%20College%20Majors.ipynb)
 3. [Visualizing The Gender Gap In College Degrees](https://github.com/dennisjooo/dqguidedprojects/tree/main/Visualizing%20The%20Gender%20Gap%20In%20College%20Degrees/Visualizing%20The%20Gender%20Gap%20In%20College%20Degrees.ipynb)
@@ -27,6 +28,7 @@ Enough jibber-jabber, please enjoy exploring my works :)
 20. [Creating a Kaggle Workflow](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20a%20Kaggle%20Workflow/Creating%20a%20Kaggle%20Workflow.ipynb)
 
 ### R
+---
 1. [Investigationg COVID-19 Virus Trends](https://github.com/dennisjooo/dq-guided-project/blob/main/Investigating%20COVID-19%20Virus%20Trends/Investigating%20COVID-19%20Virus%20Trends.Rmd)
 2. [Creating An Efficient Data Analysis Workflow](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20An%20Efficient%20Data%20Analysis%20Workflow/Creating%20An%20Efficient%20Data%20Analysis%20Workflow.Rmd)
 3. [Creating An Efficient Data Analysis Workflow, Part 2](https://github.com/dennisjooo/dq-guided-project/blob/main/Creating%20An%20Efficient%20Data%20Analysis%20Workflow%2C%20Part%202/Creating%20An%20Efficient%20Data%20Analysis%20Workflow%2C%20Part%202.Rmd)
