@@ -1,0 +1,168 @@
+---
+title: "Analyzing Forest Fire Data"
+author: "Dennis Jonathan"
+date: "5/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this exercise, we are applying what we have learned before about data visualization and other previous materials to explore a dataset of forest fires. Forest fires can create ecological problems and endanger human lives and property. Understanding when they occur and what causes them is important for managing them. The data we'll be working with in this guided project is associated with [a scientific research paper](http://www3.dsi.uminho.pt/pcortez/fires.pdf) on predicting the occurrence of forest fires in Portugal using modeling techniques.
+
+We will not use any type of modeling on this project, but rather we'll focus on visualizing it. In this project, though, we'll perform exploratory analyses on the data to better understand it and any relationships that might be present in it. Remember, exploring data visually is often the first step data scientists take when working with new data.
+
+The data set is available [here](https://archive.ics.uci.edu/ml/machine-learning-databases/forest-fires/). Without further ado, let's begin!
+
+### Prerequisites
+``` {r prereqs}
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing tidyverse
+library(tidyverse)
+
+# Importing lubridate
+library(lubridate)
+
+# Importing our dataset
+df <- read_csv('forestfires.csv')
+```
+### Initial Exploration
+``` {r ie1}
+# Previewing the first five data
+head(df,5)
+
+# Finding the dimension of the data
+dim(df)
+
+# Finding the column names
+colnames(df)
+```
+We can see that there are 517 rows and 13 columns that we can explore, those columns are:
+
+- `X`: X-axis spatial coordinate within the Montesinho park map: 1 to 9
+- `Y`: Y-axis spatial coordinate within the Montesinho park map: 2 to 9
+- `month`: Month of the year: 'jan' to 'dec'
+- `day`: Day of the week: 'mon' to 'sun'
+- `FFMC`: Fine Fuel Moisture Code index from the FWI system: 18.7 to 96.20
+- `DMC`: Duff Moisture Code index from the FWI system: 1.1 to 291.3
+- `DC`: Drought Code index from the FWI system: 7.9 to 860.6
+- `ISI`: Initial Spread Index from the FWI system: 0.0 to 56.10
+- `temp`: Temperature in Celsius degrees: 2.2 to 33.30
+- `RH`: Relative humidity in percentage: 15.0 to 100
+- `wind`: Wind speed in km/h: 0.40 to 9.40
+- `rain`: Outside rain in mm/m2 : 0.0 to 6.4
+- `area`: The burned area of the forest (in ha): 0.00 to 1090.84
+
+Each rows represent a single occurrence of forest fire complete with the coordinate, time, and some metrics that might describe the condition of the particular area at the time. A quick Google search tells us that forest fires main kryptonite is water. Intuitively we can think that water prevents the spread of fire during forest fires, thus it is safe to assume that `DMC` and `rain` might be correlated to `area`.
+
+### Data Processing
+Now we have reached the somewhat laborious step which is tweaking the data to help us gain more insights out of it. The first thing that we are going to do is to convert `month` and `day` into categorical data. We can do that by using the `factor()` function, but before doing that, we need to know the unique values for those columns.
+
+``` {r cat1}
+# Checking the unique values for the month column
+df %>% pull(month) %>% unique
+
+# Checking the unique values for the day column
+df %>% pull(day) %>% unique
+```
+Now that we have seen the unique values, we can convert them into categorical. For this instance, we can convert them base on order, so for `month`, 'jan' will be first and 'dec' will be twelfth, while for `day`, 'mon' will be first and 'sun' will be seventh.
+``` {r cat2}
+# Creating categorical columns
+df <- df %>% mutate(
+  month = factor(month, levels=c(
+    'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'
+  )),
+  day = factor(day, levels=c(
+    'mon','tue','wed','thu','fri','sat','sun'
+  ))
+)
+
+# Checking the change for month column
+df %>% pull(month) %>% levels()
+
+# Checking the change for day column
+df %>% pull(day) %>% levels()
+```
+### Visualization
+#### 1. When does forest fires occur the most?
+We will now try and find out when does forest fires occur the most in terms of month and day. To do this, we will create a separate data frame which group the data based on `month` or `day` and then count the number of rows.
+``` {r vismon}
+# Aggregating data based on month
+agg_mon <- df %>% group_by(month) %>% summarize(
+  count = n()
+)
+
+# Plotting the data
+agg_mon %>% ggplot(aes(x=month,y=count)) + geom_col() + labs(title='Number of Forest Fires per Month',x='Month',y='Count')
+```
+
+We can see that forest fires in this area mostly occurs in August and September. Those two months is closely followed by March. We will now do the same and find out what day does forest fire in this area occur the most.
+``` {r visday}
+# Aggregating the data based on day
+agg_day <- df %>% group_by(day) %>% summarize(
+  count = n()
+)
+
+# Plotting the data
+agg_day %>% ggplot(aes(x=day,y=count)) + geom_col() + labs(title='Number of Forest Fires per Day',x='Day',y='Count')
+```
+
+Forest fires in this area occurs most on Sunday, followed by Friday and Saturday or simply the weekends.
+#### 2. Other variables against time
+We will now plot how other variables might correlate with time. To do this, we will try to create a longer data frame for the other columns first and then use `facet_wrap()` to plot it neatly in the end.
+```{r ov_mon}
+# Creating a longer version of df for the other variables
+df_long <- df %>% 
+  pivot_longer(
+    cols = c("FFMC", "DMC", "DC", 
+             "ISI", "temp", "RH", 
+             "wind", "rain"),
+    names_to = "data_col",
+    values_to = "value"
+  )
+
+# Plotting the data frame based on month
+df_long %>% ggplot(aes(x=month,y=value))+geom_boxplot()+facet_wrap(vars(data_col),scale='free_y')+labs(
+    title = "Variable changes over month",
+    x = "Month",
+    y = "Variable value"
+  )
+
+# Plotting the data frame based on day
+df_long %>% ggplot(aes(x=day,y=value))+geom_boxplot()+facet_wrap(vars(data_col),scale='free_y')+labs(
+    title = "Variable changes over day",
+    x = "day",
+    y = "Variable value"
+  )
+```
+
+#### 3. Factors influencing area burned
+We will now try and find whether area burned is correlated to any of the variables that we have. To do this, we can use the help of scatter plots to show the strength of the relationship as well as the direction. 
+```{r area}
+# Plotting the data frame based on month
+df_long %>% ggplot(aes(x=value,y=area))+geom_point()+facet_wrap(vars(data_col),scale='free_x')+labs(
+    title = "Factors Influencing Area Burned",
+    x = "Factors",
+    y = "Area Burned (Hectare)"
+  )
+```
+
+We can see that most of the metrics might not be directly correlated to `area`, but we need to investigate it further to confirm that assumption. The graph also shows that we indeed have outliers in terms of `area` and their values are greater than about 500 Ha, thus we can filter it out and investigate again.
+```{r area2}
+df_long %>% filter(area<500) %>% ggplot(aes(x=value,y=area))+geom_point()+facet_wrap(vars(data_col),scale='free_x')+labs(
+    title = "Factors Influencing Area Burned for Area < 500 hectares",
+    x = "Factors",
+    y = "Area Burned (Hectare)"
+)
+```
+
+After looking at the correlation, we can see clearly that the presence of more rain decreases the area burned during forest fires in the area. Contrary to that, an increase of fine fuel moisture increases the total area burned. As for the others, we cannot say whether there is a definitive pattern which presents itself from the data.
+
+### Conclusion
+1. Most fores fires in the area occurs in August and September.
+2. Days with the most forest fires are Sunday, Saturday, and Friday.
+3. Increase in the presence of rain decreases the area burned during the fire.
+4. Increase in fine fuel moisture increases the total area burned.
