@@ -1,0 +1,147 @@
+---
+title: "NYC Schools Perceptions"
+author: "Dennis Jonathan"
+date: "5/11/2021"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this exercise, we will try and apply what we have learned before regarding techniques to clean and analyze a fairly large real-world dataset: Data on parent, student, and teacher perceptions of New York City schools collected using [surveys](https://data.cityofnewyork.us/Education/2011-NYC-School-Survey/mnz3-dyi8). The general theme of the data we will be working with are responses to surveys designed to gauge parent, student, and teacher perceptions of the quality of New York City schools. In this guided project, we'll try investigating the following questions:
+
+* Do student, teacher, and parent perceptions of NYC school quality appear to be related to demographic and academic success metrics?
+
+* Do students, teachers, and parents have similar perceptions of NYC school quality?
+
+We will use the surveys above along with a [combined data](https://data.world/dataquest/nyc-schools-data/workspace/file?filename=combined.csv) called `combined.csv` which consists of several test scores and other information regarding schools in New York which we have worked on previously. 
+
+The exercise will primarily focus on high schools (`combined.csv` contains data only from high schools) with the surveys as additional resources.
+
+##Prerequisites
+```{r prereqs}
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing tidyverse
+library(tidyverse)
+```
+
+## Importing the Data
+We will now import three datasets which will be used for the analysis. As for the surveys, we will utilized the `.tsv` version instead of the `.xlsx`, to import it in, we will be using the function `read_tsv()`.
+
+```{r importing data}
+combined <- read_csv("combined.csv") 
+survey <- read_tsv("masterfile11_gened_final.txt")
+survey_d75 <- read_tsv("masterfile11_d75_final.txt")
+```
+Now that we have imported the data in, we can begin.
+
+## Data Cleaning
+The first issue that rises is that the survey might contain every type of schools which will be quite redundant further on since we will be limiting our scope to only high schools (which we will get from the `survey` dataframe) and every district 75 schools (which we will get from `survey_d75`). We will also only use variables that contain aggregate scores (columns ending with `_11`) and also DBN (in order to join this data to `combined`).
+
+```{r filtering necessary data}
+# Selecting only the required data from survey
+survey <- survey %>%
+  filter(schooltype == "High School") %>%
+  select(dbn,schoolname,schooltype,saf_p_11:aca_tot_11)
+
+# Selecting the required data from survey_d75
+survey_d75 <- survey_d75 %>%
+  select(dbn,schoolname,schooltype,saf_p_11:aca_tot_11)
+
+# Combining both dataset together
+survey_com <- survey %>% bind_rows(survey_d75)
+
+# Renaming the DBN column so that it is the same with combined
+survey_com <- survey_com %>% rename(DBN = dbn)
+```
+After getting the data that we needed, there was a possibility that we could combine both dataframe into one. To do this, we used `bind_rows()` to combine both data set since we had selected the same columns for both occasion. Next we will join our new data to `combined` by using `left_join()`.
+
+```{r joining the data}
+combined_survey <- combined %>%
+  left_join(survey_com, by = "DBN")
+```
+
+## Analysis
+### 1. Correlations
+Now we will find whether there is any interesting relationships between SAT scores and the survey answers. To do this, we will create a correlation matrix using the function `cor()`.
+
+```{r creating correlation matrix}
+# Creating a correlation matrix
+cor_mat <- combined_survey %>%    
+  select(avg_sat_score, saf_p_11:aca_tot_11) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  as_tibble(rownames = "variable")
+
+# Printing the correlation matrix
+print(cor_mat %>% select(variable, avg_sat_score))
+```
+From the correlation matrix, we could see that safety metrics (for teachers, students, parents) have high correlation to SAT scores. Another factor which has an influence on SAT scores was  Student's perception of Academic Expectations. We will try and plot those columns which have absolute correlation of greater than 0.25 to `avg_sat_score`.
+
+```{r creating scatter plots}
+# Filtering the columns which has absolute corr higher than 0.25
+high_corr <- cor_mat %>% select(variable, avg_sat_score) %>% filter((abs(avg_sat_score) > 0.25) & (variable != 'avg_sat_score'))
+
+# Getting the  names
+cols <- high_corr$variable[1:4]
+
+# Plotting scatter plots for the columns
+for (i in cols){
+  temp <- ggplot(data = combined_survey, aes(x = combined_survey[[i]], y = avg_sat_score)) + geom_point(alpha = 0.25) + labs(x= toString(i)) + theme(panel.background = element_rect(fill = "white"))
+print(temp)
+}
+```
+
+It was not quite clear, but we could interpret all of the graphs above to have a positive correlation to `avg_sat_score` just like the correlation matrix. We could also guess that the strength of the correlation is not that strong
+
+### 2. Difference of Response
+We knew that there are four respondents for the survey, which are:
+
+1. Students
+2. Teachers
+3. Parents
+4. Total
+
+We will now investigate whether there are differences in how they respond to the questions for each metrics. To do this, we will need to reshape the data and add some new columns.
+
+```{r reshaping the data and changing some values}
+# Using pivot longer for the surveys
+combined_survey_gather <- combined_survey %>%
+  pivot_longer(cols = saf_p_11:aca_tot_11,
+               names_to = "survey_question",
+               values_to = "score")
+
+# Extracting the metrics and the respondent
+combined_survey_gather <- combined_survey_gather %>%
+  mutate(respondent = str_sub(survey_question, 4, 6)) %>%   
+  mutate(question = str_sub(survey_question, 1, 3))
+
+# Converting respondent into interpret-able form
+combined_survey_gather <- combined_survey_gather %>%
+  mutate(respondent = ifelse(respondent  == "_p_", "parent", 
+                                ifelse(respondent == "_t_", "teacher",
+                                       ifelse(respondent == "_s_", "student", 
+                                              ifelse(respondent == "_to", "total", "NA")
+                                              )
+                                       )
+                           )
+         )
+```
+After that, we utilize boxplots to visualize whether there are indeed differences in the answers from the respondents.
+```{r creating boxplots}
+# Plotting boxplots
+for (i in unique(combined_survey_gather$question)){
+  temp <- combined_survey_gather %>% ggplot(aes(x = combined_survey_gather[[i]], y = score ,fill = respondent)) + geom_boxplot() + labs(x= toString(i)) + theme(panel.background = element_rect(fill = "white"))
+  print(temp)
+}
+```
+
+From the boxplot, it was clear to see that parents and teachers tend to give higher scores for each metrics compared to students. In terms of the spread of the scores, teachers tend vary more than the other respondents while parents have the least variety. The reason behind this needs to be investigated further.
+
+## Conclusion
+
+To conclude this exercise, there were two things that needs to be noted:
+
+1. Safety seems to be the most important factor in terms of academic success
+2. Teachers and parents seem to have better opinion of all the metrics compared to students
