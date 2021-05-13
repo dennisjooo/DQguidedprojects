@@ -18,7 +18,7 @@ We will use the surveys above along with a [combined data](https://data.world/da
 
 The exercise will primarily focus on high schools (`combined.csv` contains data only from high schools) with the surveys as additional resources.
 
-##Prerequisites
+## Prerequisites
 ```{r prereqs}
 # Shutting off warning messages
 options(warn=-1)

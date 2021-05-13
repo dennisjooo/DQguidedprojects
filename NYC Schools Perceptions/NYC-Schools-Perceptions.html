@@ -178,7 +178,8 @@ pre code {
 </ul>
 <p>We will use the surveys above along with a <a href="https://data.world/dataquest/nyc-schools-data/workspace/file?filename=combined.csv">combined data</a> called <code>combined.csv</code> which consists of several test scores and other information regarding schools in New York which we have worked on previously.</p>
 <p>The exercise will primarily focus on high schools (<code>combined.csv</code> contains data only from high schools) with the surveys as additional resources.</p>
-<p>##Prerequisites</p>
+<div id="prerequisites" class="section level2">
+<h2>Prerequisites</h2>
 <pre class="r"><code># Shutting off warning messages
 options(warn=-1)
 
@@ -192,6 +193,7 @@ library(tidyverse)</code></pre>
 <pre><code>## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()</code></pre>
+</div>
 <div id="importing-the-data" class="section level2">
 <h2>Importing the Data</h2>
 <p>We will now import three datasets which will be used for the analysis. As for the surveys, we will utilized the <code>.tsv</code> version instead of the <code>.xlsx</code>, to import it in, we will be using the function <code>read_tsv()</code>.</p>
