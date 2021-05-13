@@ -1,0 +1,282 @@
+---
+title: "Answering Business Questions using SQL"
+author: "Dennis Jonathan"
+date: "5/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Now we will try and use some of the skills that we have learned during the SQL courses to answer some business questions. We will be using the famous [`chinook.db`](https://dsserver-prod-resources-1.s3.amazonaws.com/374/chinook.db) dataset as the foundation of our project.
+
+We'll be working with a modified version of a database called Chinook. The Chinook database contains information about a fictional digital music shop - kind of like a mini-iTunes store.
+
+The Chinook database contains information about the artists, songs, and albums from the music shop, as well as information on the shop's employees, customers, and the customers purchases. This information is contained in eleven tables. Like with our Factbook database, a schema diagram will help us understand the available columns and the structure of the data. Here's a schema diagram for the Chinook database:
+
+
+## Prerequisites
+```{r prereqs}
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing the libraries
+library(tidyverse)
+library(DBI)
+library(RSQLite)
+```
+
+## Creating Some Helper Functions
+Before we begin, we might want to define some functions to reduce the amount of repetitive codes that we might call, some example includes querying and also previewing the data that we can play with.
+``` {r funcs}
+# Defining a function to import the data from sqlite
+run_query <- function(query){
+  conn <- dbConnect(SQLite(),'chinook.db')
+  result <- dbGetQuery(conn, query)
+  dbDisconnect(conn)
+  result
+}
+
+# Previewing all tables
+show_tables <- function() {
+  q = "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view')"
+  return(run_query(q))
+}
+
+show_tables()
+```
+As we can see, we have created two functions that will make our live easier down the road.
+
+## Analysis
+### 1. Genre recommendation
+We will try and give some recommendations for the genre which our store shoul purchase. To do this, we will find the percentage share for the genres based on our historical data. We are also presented with the choice of purchasing albums from some artists, those artists are:
+
+|**Artist Name**|**Genre**|
+|---|---|
+|Regal|Hip-Hop|
+|Red Tone|Punk|
+|Meteor and the Girls|Pop|
+|Slim Jim Bites|Blues|
+
+```{r genre_rec}
+# Writing the query
+query1 <- "
+WITH cus_invo AS
+    (
+    SELECT 
+        g.name genre
+    FROM customer c
+    INNER JOIN invoice i ON i.customer_id=c.customer_id
+    INNER JOIN invoice_line il ON il.invoice_id=i.invoice_id
+    INNER JOIN track t ON t.track_id=il.track_id
+    INNER JOIN genre g ON g.genre_id=t.genre_id
+    WHERE c.country='USA'
+    )
+    
+SELECT 
+    genre,
+    COUNT(genre) total_sold,
+    ROUND(CAST(COUNT(genre) AS float)/(SELECT COUNT(*) FROM cus_invo),4) percentage_share
+FROM cus_invo
+GROUP BY 1
+ORDER By 2 DESC;
+"
+
+# Storing the query
+genre_rec <- run_query(query1)
+
+# Previewing the result
+genre_rec
+
+# Plotting the query
+genre_rec %>% ggplot(aes(x = reorder(genre, -total_sold), y = total_sold, fill = genre)) + geom_col() +
+                     labs(title = 'Genre Sold', y = 'Tracks', x = element_blank()) +
+                     theme(panel.background = element_rect(fill = "white"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.position = "none")
+```
+
+The graph indicated that the Rock Genre is the highest selling genre in the United States with alternative & punk trailing in second. Thus, purchasing Red Tone's albums would be wise since the genre is the second favorite in the US.
+
+### 2. Anaylyzing sales agent
+Each customer for the Chinook store gets assigned to a sales support agent within the company when they first make a purchase. We have been asked to analyze the purchases of customers belonging to each employee to see if any sales support agent is performing either better or worse than the others.
+```{r salesagent}
+# Writing the query
+query2 <- "
+WITH
+    cus_inv AS
+    (
+    SELECT
+        c.support_rep_id,
+        SUM(i.total) total_purchases
+    FROM customer c
+    INNER JOIN invoice i ON i.customer_id=c.customer_id
+    GROUP BY c.customer_id)
+
+SELECT
+    e.first_name||' '||e.last_name employee_name,
+    e.hire_date,
+    ROUND(SUM(ci.total_purchases),2) total_contribution
+FROM employee e
+INNER JOIN cus_inv ci ON ci.support_rep_id=e.employee_id
+GROUP BY e.employee_id
+ORDER BY total_contribution DESC;
+"
+# Getting the data from SQL
+sales_agent <- run_query(query2)
+
+# Previewing the result
+sales_agent
+```
+
+A quick observation told us that Jane Peacock is the highest contributing sales agent with 1731.51 dollars and Steve Johnson is the lowest at 1393.92 dollars. There seemed to be a correlation between the hire date and the total contribution where older employees tend to contribute more than newer employees.
+
+### 3. Sales from other countries
+Here we want to see where our customers are from (the country) and how much they spend in that country. This can be useful if we decide to expand to that particular country or decide to increase sales there.
+
+```{r country}
+# Writing the query
+query3 <- "
+WITH country_c AS
+    (
+    SELECT
+        CASE
+            WHEN (SELECT COUNT(*) FROM customer
+                 WHERE country=c.country)=1 THEN 'Other'
+            ELSE c.country
+        END AS country,
+        COUNT(DISTINCT c.customer_id) n_customer,
+        ROUND(SUM(il.unit_price),2) total_value,
+        ROUND(SUM(il.unit_price)/COUNT(DISTINCT i.invoice_id),2) average_order_Value
+    FROM invoice_line il
+    INNER JOIN invoice i ON i.invoice_id=il.invoice_id
+    INNER JOIN customer c ON c.customer_id=i.customer_id
+    GROUP BY 1
+    )
+SELECT 
+    country,
+    n_customer,
+    total_value,
+    ROUND(total_value/n_customer,2) average_value_per_customer,
+    average_order_value
+FROM
+    (
+    SELECT
+        cc.*,
+        CASE
+            WHEN cc.country = 'Other' THEN 1
+            ELSE 0
+        END AS sort
+    FROM country_c cc
+   )
+ORDER BY 4 DESC;
+"
+
+# Running the query
+country <- run_query(query3)
+
+# Previewing the result
+country
+```
+
+Based on the table above, we could clearly see that there is a room for improvement for India, Czech Republic and the UK since they have the least amount of unique customers there but having the three highest average order value. That being said, we must be wary since the sample size is quite small.
+
+```{r country_viz}
+# Plotting the number of customers
+ggplot(data = country, aes(x = reorder(country, -n_customer), 
+                                   y = n_customer, 
+                                   fill = country)) +
+  geom_bar(stat = "identity") +
+  coord_polar("y") + 
+  labs(
+    title = "Number of Customers by country",
+    x = element_blank(),
+    y = "Customers"
+  ) + theme( panel.background = element_rect(fill = "white"), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+# Plotting total value of customers
+ggplot(data = country, aes(x = reorder(country, -total_value), 
+                                   y = total_value, 
+                                   fill = country)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Total Sales by country",
+    x = element_blank(),
+    y = "Total Sales"
+  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.background = element_rect(fill = "white"), legend.position = "none")
+
+
+# Plotting the number of customers
+ggplot(data = country, aes(x = reorder(country, -average_order_Value), 
+                                   y = average_order_Value, 
+                                   fill = country)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Average Customer Order Value by Country",
+    x = element_blank(),
+    y = "Average Order Value"
+  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.background = element_rect(fill = "white"), legend.position = "none")
+
+# Plotting average value per customer
+ggplot(data = country, aes(x = reorder(country, -average_value_per_customer), 
+                                   y = average_value_per_customer, 
+                                   fill = country)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Average Total Spending per Customer by country",
+    x = element_blank(),
+    y = "Average Total Spending"
+  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.background = element_rect(fill = "white"), legend.position = "none")
+```
+
+### 4. Buy albums or tracks?
+The last question is whether the company should buy songs in the form of albums or tracks, we will investigate it based on the customer spending habit.
+
+```{r album_track}
+# Writing the query
+query4 <- "WITH track_album AS
+    (
+        SELECT DISTINCT a.album_id,
+                        COUNT(DISTINCT t.track_id) track_count
+        FROM track t
+        INNER JOIN album a ON t.album_id = a.album_id
+        GROUP BY a.album_id
+    ),
+    
+    track_il AS
+    (
+        SELECT il.invoice_id, 
+               t.album_id,
+               COUNT(DISTINCT il.track_id) track_count
+        FROM track t
+        INNER JOIN invoice_line il ON il.track_id = t.track_id
+        GROUP BY invoice_id, album_id
+    )
+
+SELECT purchase_type,
+       COUNT(DISTINCT il.invoice_id) invoice_count,
+       ROUND(CAST(COUNT(DISTINCT pt.invoice_id) AS FLOAT) / (
+                                                       SELECT COUNT(*) 
+                                                       FROM invoice
+                                                             ) * 100, 0) percentage
+FROM       
+   (
+        SELECT il.invoice_id, 
+        CASE WHEN
+                til.track_count = ta.track_count THEN 'Album'
+                ELSE 'Individual Tracks'
+                END AS purchase_type  
+        FROM invoice_line il
+        INNER JOIN track_il til ON il.invoice_id = til.invoice_id
+        INNER JOIN track_album ta ON til.album_id = ta.album_id
+        GROUP BY il.invoice_id
+   ) AS pt
+INNER JOIN invoice_line il ON pt.invoice_id = il.invoice_id
+GROUP BY purchase_type;
+"
+
+# Running the query
+album_track <- run_query(query4)
+
+# Previewing the result
+album_track
+```
+The table showed that customers prefer to buy songs by the track instead of a full album. Thus it would be wise to create our business model based on that fact.
