@@ -341,7 +341,7 @@ sales_agent</code></pre>
 ## 1  Jane Peacock 2017-04-01 00:00:00            1731.51
 ## 2 Margaret Park 2017-05-03 00:00:00            1584.00
 ## 3 Steve Johnson 2017-10-17 00:00:00            1393.92</code></pre>
-<p>A quick observation told us that Jane Peacock is the highest contributing sales agent with 1731.51 dollars and Steve Johnson is the lowest at 1393.92 dollars. There seemed to be a correlation between the hire date and the total contribution where older employees tend to contribute more than newer employees.</p>
+<p>A quick observation tells us that Jane Peacock is the highest contributing sales agent with 1731.51 dollars and Steve Johnson is the lowest at 1393.92 dollars. There seems to be a correlation between the hire date and the total contribution where older employees tend to contribute more than newer employees.</p>
 </div>
 <div id="sales-from-other-countries" class="section level3">
 <h3>3. Sales from other countries</h3>
@@ -410,7 +410,7 @@ country</code></pre>
 ## 8                 7.78
 ## 9                 7.45
 ## 10                7.05</code></pre>
-<p>Based on the table above, we could clearly see that there is a room for improvement for India, Czech Republic and the UK since they have the least amount of unique customers there but having the three highest average order value. That being said, we must be wary since the sample size is quite small.</p>
+<p>Based on the table above, we can clearly see that there is a room for improvement for India, Czech Republic and the UK since they have the least amount of unique customers there but having the three highest average order value. That being said, we must be wary since the sample size is quite small.</p>
 <pre class="r"><code># Plotting the number of customers
 ggplot(data = country, aes(x = reorder(country, -n_customer), 
                                    y = n_customer, 
@@ -510,7 +510,7 @@ album_track</code></pre>
 <pre><code>##       purchase_type invoice_count percentage
 ## 1             Album           117         19
 ## 2 Individual Tracks           497         81</code></pre>
-<p>The table showed that customers prefer to buy songs by the track instead of a full album. Thus it would be wise to create our business model based on that fact.</p>
+<p>The table shows that customers prefer to buy songs by the track instead of a full album. Thus it would be wise to create our business model based on that fact.</p>
 </div>
 </div>
 

@@ -127,7 +127,7 @@ sales_agent <- run_query(query2)
 sales_agent
 ```
 
-A quick observation told us that Jane Peacock is the highest contributing sales agent with 1731.51 dollars and Steve Johnson is the lowest at 1393.92 dollars. There seemed to be a correlation between the hire date and the total contribution where older employees tend to contribute more than newer employees.
+A quick observation tells us that Jane Peacock is the highest contributing sales agent with 1731.51 dollars and Steve Johnson is the lowest at 1393.92 dollars. There seems to be a correlation between the hire date and the total contribution where older employees tend to contribute more than newer employees.
 
 ### 3. Sales from other countries
 Here we want to see where our customers are from (the country) and how much they spend in that country. This can be useful if we decide to expand to that particular country or decide to increase sales there.
@@ -177,7 +177,7 @@ country <- run_query(query3)
 country
 ```
 
-Based on the table above, we could clearly see that there is a room for improvement for India, Czech Republic and the UK since they have the least amount of unique customers there but having the three highest average order value. That being said, we must be wary since the sample size is quite small.
+Based on the table above, we can clearly see that there is a room for improvement for India, Czech Republic and the UK since they have the least amount of unique customers there but having the three highest average order value. That being said, we must be wary since the sample size is quite small.
 
 ```{r country_viz}
 # Plotting the number of customers
@@ -279,4 +279,4 @@ album_track <- run_query(query4)
 # Previewing the result
 album_track
 ```
-The table showed that customers prefer to buy songs by the track instead of a full album. Thus it would be wise to create our business model based on that fact.
+The table shows that customers prefer to buy songs by the track instead of a full album. Thus it would be wise to create our business model based on that fact.
