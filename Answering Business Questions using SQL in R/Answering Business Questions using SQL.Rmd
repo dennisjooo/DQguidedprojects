@@ -94,7 +94,7 @@ genre_rec %>% ggplot(aes(x = reorder(genre, -total_sold), y = total_sold, fill =
                      theme(panel.background = element_rect(fill = "white"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.position = "none")
 ```
 
-The graph indicated that the Rock Genre is the highest selling genre in the United States with alternative & punk trailing in second. Thus, purchasing Red Tone's albums would be wise since the genre is the second favorite in the US.
+The graph indicates that the Rock Genre is the highest selling genre in the United States with alternative & punk trailing in second. Thus, purchasing Red Tone's albums would be wise since the genre is the second favorite in the US.
 
 ### 2. Anaylyzing sales agent
 Each customer for the Chinook store gets assigned to a sales support agent within the company when they first make a purchase. We have been asked to analyze the purchases of customers belonging to each employee to see if any sales support agent is performing either better or worse than the others.
