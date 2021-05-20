@@ -1,0 +1,150 @@
+---
+title: "Analyzing Movie Ratings"
+author: "Dennis Jonathan"
+date: "5/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this guided project, we will try and analyze movie ratings which will be taken from [IMDB.com](imdb.com). [IMDB.com](imdb.com) is the world's most popular and authoritative source for movie, TV, and celebrity content. There users can rate movies and TV-series on a scale of 1 to 10 (with 1 being the lowest and 10 being the highest). What we are trying to do is extract the top 30 movies between March and July 2020 including details such as a movie's title, description, actors, director, genre, runtime, and ratings. Then, we will check whether those things have any correlation to user review scores.
+
+To avoid external server instability issues, use [this link](http://dataquestio.github.io/web-scraping-pages/IMDb-DQgp.html), which is a copy of the study page on Dataquest's servers. We will only extract the top 30 movies from that two months.
+
+## Prerequisites
+
+```{r prereq}
+# Importing the libraries
+library(rvest)
+library(tidyverse)
+
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing the HTML
+url <- "http://dataquestio.github.io/web-scraping-pages/IMDb-DQgp.html"
+wp_content <- read_html(url)
+```
+
+## String Manipulation Self Reminder
+We will now remind ourselves of some string manipulation techniques which we have learned previously. After that, we can use those techniques in our HTML data.
+
+``` {r smsr}
+# Converting "10.50" to numeric
+as.numeric('10.50')
+
+# Converting a vector into numeric
+as.numeric(c("14.59", "3.14", "55"))
+
+# Parsing numbers from string vectors
+parse_number(c("14 min", "17,35", "(2012)", "1,2,3,4"))
+
+# Removing whitespaces
+str_trim(" Spaces before and after should disappear    ")
+```
+
+## Extracting the Data from the HTML
+
+### 1. Extracting Title and Release Year
+We will now extract some elements from the header, namely the movie title and its release year. We will need to inspect the HTML formatting for the page. We found out that both the title and the year is in the section called  `.lister-item-header`, specifically title is in `.lister-item-header a` and the release year is in `.lister-item-year`. As we have mentioned before, we will only select 30 entries. Since year is contained between two brackets, we will need to use `parse_number()` to just get the thing we want.
+
+``` {r header_element}
+# Extracting movie titles
+title <- wp_content %>% html_nodes('.lister-item-header a') %>% html_text()
+
+# Extracting release years
+year <- wp_content %>% html_nodes('.lister-item-year') %>% html_text() %>% parse_number()
+```
+
+### 2. Extracting Runtime and Genre
+Next up we will extract the movie's runtime and its genres. The technique is pretty much the same as extracting the two things above except the information we need now might be contained in other sections. Runtime is contained in the class `.runtime` while Genre is contained in `.genre`. Since the format for runtime is 'xx min', we will use `parse_number()` to only get the number of minutes. Genre also contained some whitepaces, thus using `str_trim()` might be useful.
+
+```{r r_g}
+# Extracting the runtime
+runtime <- wp_content %>% html_nodes('.runtime') %>% html_text() %>% parse_number()
+
+# Extracting the genre
+genre <- wp_content %>% html_nodes('.genre') %>% html_text() %>% str_trim()
+```
+
+### 3. Extracting Metacritic Score and IMDB Score
+Same thing as before, we will get both ratings from the HTML. Metacritic Score is located in `.ratings-metascore` and IMDB score is located in `.ratings-imdb-rating` in the attribute `data-value`. We need to know that there are some movies which does not have Metascore, IMDB Score or even both. We will deal with the missing data later on. We will also need to convert the both scores into numeric using `as.numeric()`.
+
+```{r meta_imdb}
+# Extracting metascores
+meta <- wp_content %>% html_nodes('.metascore') %>% html_text() %>% str_trim() %>% as.numeric()
+
+# Extracting IMDB scores
+imdb <- wp_content %>% html_nodes(".ratings-imdb-rating") %>% html_attr("data-value") %>% as.numeric()
+```
+
+#### 4. Extracting Movie Votes
+The last but not the least, we will extract movie votes from the page. Movie votes is located in `.sort-num_votes-visible :nth-child(2)` and we will need to use `parse_number()` to only get the numerics.
+
+```{r mv}
+# Extracting the movie votes
+mv <- wp_content %>% html_nodes('.sort-num_votes-visible :nth-child(2)') %>% html_text() %>% parse_number()
+```
+
+## Data Cleaning
+The data cleaning process will include filling in some missing values in the vectors. We will use the function `append_vector()` which is given to fill the missing values according to the index (which is the distance to the previous non-missing index). After filling the missing values, we will create a dataframe  We will also drop the 17th row (a row which has a lot of missing values) from the final dataframe.
+
+```{r cleaning}
+# Function to append vectors
+append_vector <- function(vector, inserted_indices, values){
+
+  ## Creating the current indices of the vector
+  vector_current_indices <- 1:length(vector)
+
+  ## Adding small amount of values (between 0 and 0.9) to the `inserted_indices`
+  new_inserted_indices <- inserted_indices + seq(0, 0.9, length.out = length(inserted_indices))
+
+  ## Appending the `new_inserted_indices` to the current vector indices
+  indices <- c(vector_current_indices, new_inserted_indices)
+
+  ## Ordering the indices
+  ordered_indices <- order(indices)
+
+  ## Appending the new value to the existing vector
+  new_vector <- c(vector, values)
+
+  ## Ordering the new vector wrt the ordered indices
+  new_vector[ordered_indices]
+}
+
+# Filling in the missing data in Metascore
+meta <- append_vector(meta, c(1, 1, 1, 13, 24), NA)
+
+# Dropping the 17th row.
+title <- title[-17]
+year <- year[-17]
+runtime <- runtime[-17]
+genre <- genre[-17]
+meta <- meta[-17]
+```
+
+We will now create a dataframe out of all the vectors.
+
+```{r df}
+# Creating a dataframe
+df <- tibble('title' = title,
+             'year' = year,
+             'runtime' = runtime,
+             'genre' = genre,
+             'metascore' = meta,
+             'rating' = floor(imdb),
+             'vote' = mv)
+```
+
+## Visualizing the Datatrame
+We will now create boxplots for all the columns in the dataframe to visualize our dataset
+
+```{r boxplot}
+for (i in c('metascore', 'vote')){
+  print(df %>% ggplot(aes(x = rating, y = df[[i]], group = rating)) + geom_boxplot() 
+        + labs(x = tools::toTitleCase('Rating'), y = tools::toTitleCase(i)))
+  }
+
+```
