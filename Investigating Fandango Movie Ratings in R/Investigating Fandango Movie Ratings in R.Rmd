@@ -1,0 +1,229 @@
+---
+title: "Investigating Fandango Movie Ratings"
+author: "Dennis Jonathan"
+date: "5/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In October 2015, a data journalist named Walt Hickey analyzed movie ratings data and found strong evidence to suggest that Fandango's rating system was biased and dishonest ([Fandango](https://www.fandango.com/) is an online movie ratings aggregator). He published his analysis in [this article](https://fivethirtyeight.com/features/fandango-movies-ratings/) — a great piece of data journalism that's totally worth reading.
+
+Fandango displays a 5-star rating system on their website, where the minimum rating is 0 stars and the maximum is 5 stars.
+
+Hickey found that there's a significant discrepancy between the number of stars displayed to users and the actual rating, which he was able to find in the HTML of the page. He was able to find that:
+
+-  actual rating was almost always rounded up to the nearest half-star. For instance, a 4.1 movie would be rounded off to 4.5 stars, not to 4 stars, as you may expect.
+- In the case of 8% of the ratings analyzed, the rounding up was done to the nearest whole star. For instance, a 4.5 rating would be rounded off to 5 stars.
+- For one movie rating, the rounding off was completely bizarre: from a rating of 4 in the HTML of the page to a displayed rating of 5 stars.
+
+![Taken from **Fivethirtyeight.com**](https://s3.amazonaws.com/dq-content/410/s1gp_actual_vs_displayed.png "Walt Hickey's Findings")
+
+The two distributions above are displayed using a simple line plot, which is also a valid way to show the shape of a distribution. The variable being examined is movie rating, and for each unique rating we can see its relative frequency (percentage) on the y-axis of the graph. When an analysis report is intended for large audiences, relative frequencies (especially percentages) are preferred over absolute frequencies.
+
+Both distributions above are strongly left-skewed, suggesting that movie ratings on Fandango are generally high or very high. We can see there's no rating under 2 stars in the sample Hickey analyzed. The distribution of displayed ratings is clearly shifted to the right compared to the actual rating distribution, suggesting strongly that Fandango inflates the ratings under the hood.
+
+Fandango's officials replied that the biased rounding off was caused by a bug in their system rather than being intentional, and they promised to fix the bug as soon as possible. Presumably, this has already happened, although we can't tell for sure since the actual rating value doesn't seem to be displayed anymore in the pages' HTML.
+
+What we are aiming to do is to see whether any change has been made after Hickey's article was published. Walt Hicky has made the data available on [Github](https://github.com/fivethirtyeight/data/tree/master/fandango). The 2016 and 2017 data has also been made available
+on [Github](https://github.com/mircealex/Movie_ratings_2016_17) thanks to the Dataquest team.
+
+
+## Prerequisites
+```{r preqs}
+# Importing the libraries necessary
+library(tidyverse)
+
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing the data
+fandango <- read_csv('fandango_score_comparison.csv')
+movieratings <- read_csv('movie_ratings_16_17.csv')
+```
+## Extracting the Data
+We will now explore both dataset a little bit and extract columns that might help with our investigation.
+```{r ex1}
+# Previewing the first three data from the fandango dataset
+head(fandango,3)
+
+# Previewing the first three data from the movieratings 
+head(movieratings,3)
+```
+We can see that both dataset has a lot of columns, but not all will be useful for us, thus we will only select some for our analysis. Since we are only focusing on Fandango scores, it would be wise to keep informations related to our main priority. From the `Fandango` dataset, we will only keep `FILM`, `Fandango_Stars`, `Fandango_Ratingvalue`, `Fandango_votes`, and `Fandango_Difference`, while from the `movieratings` dataset, we will keep `movie`, `year`, and `fandango`.
+```{r ex2}
+# Keeping columns we need from Fandango
+fandango <- fandango %>% select(FILM, Fandango_Stars, Fandango_Ratingvalue, 
+         Fandango_votes, Fandango_Difference)
+
+# Seeing the changes
+head(fandango,3)
+
+# Keeping columns we need from movieratings
+movieratings <- movieratings %>% select(movie, year, fandango)
+
+# Seeing the changes
+head(movieratings,3)
+```
+Our goal is to determine whether there has been any change in Fandango's rating system after Hickey's analysis. The population of interest for our analysis is made of all the movie ratings stored on Fandango's website, regardless of the releasing year.
+
+Because we want to find out whether the parameters of this population changed after Hickey's analysis, we're interested in sampling the population at two different periods in time — previous and after Hickey's analysis — so we can compare the two states.
+
+The data we're working with was sampled at the moments we want: one sample was taken previous to the analysis, and the other after the analysis. We want to describe the population, so we need to make sure that the samples are representative, otherwise we should expect a large sampling error and, ultimately, wrong conclusions.
+
+From Hickey's article and from the README.md of the data set's repository, we can see that he used the following sampling criteria:
+
+- The movie must have had at least 30 fan ratings on Fandango's website at the time of sampling (Aug. 24, 2015).
+- The movie must have had tickets on sale in 2015.
+
+The sampling was clearly not random because not every movie had the same chance to be included in the sample — some movies didn't have a chance at all (like those having under 30 fan ratings or those without tickets on sale in 2015). It's questionable whether this sample is representative of the entire population we're interested to describe. It seems more likely that it isn't, mostly because this sample is subject to temporal trends — e.g. movies in 2015 might have been outstandingly good or bad compared to other years.
+
+The sampling conditions for our other sample were (as it can be read in the README.md of the data set's repository):
+
+- The movie must have been released in 2016 or later.
+- The movie must have had a considerable number of votes and reviews (unclear how many from the README.md or from the data).
+
+This second sample is also subject to temporal trends and it's unlikely to be representative of our population of interest.
+
+Both these authors had certain research questions in mind when they sampled the data, and they used a set of criteria to get a sample that would fit their questions. Their sampling method is called purposive sampling (or judgmental/selective/subjective sampling). While these samples were good enough for their research, they don't seem too useful for us.
+
+## Changing the Goal of our Analysis
+At this point, we can either collect new data or change our the goal of our analysis. We choose the latter and place some limitations on our initial goal.
+
+Instead of trying to determine whether there has been any change in Fandango's rating system after Hickey's analysis, our new goal is to determine whether there's any difference between Fandango's ratings for popular movies in 2015 and Fandango's ratings for popular movies in 2016. This new goal should also be a fairly good proxy for our initial goal.
+
+## Selecting the Data
+With this new research goal, we have two populations of interest:
+
+1. All Fandango's ratings for popular movies released in 2015.
+2. All Fandango's ratings for popular movies released in 2016.
+
+Since popular is a vague word, we are going to use Hickey's definition in which a movie which has 30 or more fan votes on Fandango. We will now check whether Hickey's definition holds true or not. First we will try and see if the definition holds over the `Fandango` dataset.
+
+```{r sele}
+# Checking if the definition is true on Fandango dataset
+bool1 <- if_else(sum(fandango$Fandango_votes >= 30)== nrow(fandango),TRUE,FALSE)
+print(bool1)
+```
+As we can clearly see, the definition holds true for that particular dataset. As for `movieratings`, that particular dataset does not contain any information regarding to the number of votes and also Fandango now uses the [Rotten Tomatoes verified Audience Score](https://editorial.rottentomatoes.com/article/introducing-verified-audience-score/). These are the number of fan ratings we found on [Rotten Tomatoes](https://www.rottentomatoes.com/), then there is a high chance that the whole population would also have the same characteristic.
+```{r sele2}
+# Setting the seed for reproducibility
+set.seed(1)
+
+# Sampling the data
+sample_n(movieratings,5)
+```
+After going on Rotten Tomatoes, we found that:
+|Title|Number of Votes|
+|---|---|
+|Hands of Stone|5,285|
+|The Bye Bye Man|7,290|
+|Our Kind of Traitor|7,276|
+|The Autopsy of Jane Doe|12,405|
+|Dirty Grandpa|30,341|
+
+All of our sampled movies have more than 30 votes based on Rotten Tomatoes' metric. Thus we will go and assume that the dataset contains Hickey's definition of popular movies.
+
+We will proceed by selecting movies from 2015 and 2016. The `Fandango` dataset has the movie release year in the movie's title, we will try and extract that and only select movies released in 2015. We will also extract movies released in 2016 from `movieratings`, but since the year of released is already available, we can do it much more easily.
+
+```{r sele3}
+# Creating a new column for the release year in Fandango
+fandango <- fandango %>% 
+  mutate(year = str_sub(FILM, -5, -2))
+
+# Creating a frequency table to see the proportion for fandango
+fandango %>% group_by(year) %>% summarize(Freq = n()) %>% mutate(Prop = Freq/nrow(fandango))
+
+# Filtering the 2015 data into a new dataframe
+fandango_2015 <- fandango %>% filter(year == 2015)
+
+# Creating a frequency table to see the proportion for movieratings
+movieratings %>% group_by(year) %>% summarize(Freq = n()) %>% mutate(Prop = Freq/nrow(movieratings))
+
+# Filtering the 2016 data into a new dataframe
+fandango_2016 <- movieratings %>% filter(year == 2016)
+```
+## Analysis
+### 1. Comparing Distribution Shapes for 2015 and 2016
+
+Our aim is to figure out whether there's any difference between Fandango's ratings for popular movies in 2015 and Fandango's ratings for popular movies in 2016. One way to go about is to analyze and compare the distributions of movie ratings for the two samples.
+
+We'll start with comparing the shape of the two distributions using kernel density plots.
+
+```{r dist}
+# Selecting and renaming the column names for the 2015 data
+temp1 <- fandango_2015 %>% select(FILM,year,Fandango_Stars) %>% rename(movie = FILM,fandango = Fandango_Stars)
+temp1$year <- as.double(temp1$year)
+
+# Creating a join dataframe
+plot <- bind_rows(temp1,fandango_2016)
+plot$year <- as.factor(plot$year)
+
+# 2015 dataframe is specified in the ggplot call
+plot %>% ggplot(aes(x = fandango, fill = year,color = year)) +
+  geom_density(alpha=0.05) +
+  labs(title = "Comparing distribution shapes for Fandango's ratings\n(2015 vs 2016)",
+       x = "Stars",
+       y = "Density") +
+  scale_x_continuous(breaks = seq(0, 5, by = 0.5), 
+                     limits = c(0, 5))
+```
+
+The **brown** line denotes the distribution for the year 2015 while the **blue** line denotes the distribution for 2016. Based on the graph above, we can see that both before and after Hickey's article, the ratings have a left-skewed distribution. That being said, in 2016, we can deduce that distribution is somewhat normal with its peak at 4 stars compared to 2015's peak at nearly 4.5 stars. The values for 2016's ratings in general is relatively lower than that of 2015.
+
+### 2. Comparing Frequencies
+One factor that we need to take into account is that the number of movies that we compare is different from 2015 and 2016. We also can display the frequency in a more granular way by using frequency table.
+```{r frequency table}
+# Creating frequency table for 2015
+ft2015 <- fandango_2015 %>% 
+  group_by(Fandango_Stars) %>% 
+  summarize(Percentage = n() / nrow(fandango_2015) * 100) %>%
+  add_row(Fandango_Stars = 2.5, Percentage = 0) %>%
+  arrange(Fandango_Stars)
+
+# Creating frequency table for 2016
+ft2016 <- fandango_2016 %>% 
+  group_by(fandango) %>% 
+  summarize(Percentage = n() / nrow(fandango_2016) * 100)
+
+# Combining both table together
+ft <- tibble(stars = seq(2.5,5,by = 0.5),`2015` = ft2015$Percentage, `2016` = ft2016$Percentage)
+ft
+```
+Based on the frequency table above, we can clearly see that there is a significant decrease in rating frequency. In 2015, 4.5's frequency is 38 percent while the year after it decreases to 25 percent. We can also see that there is a decrease in 5-starred movies and increase in other categories. There is also an addition of the 2.5 stars entries in 2016, although that number is still relatively low.
+
+## 3. Descriptive Statistics
+We will end this project by measuring the mean, median and mode of the data to see whether there are indeed changes. We will then present the findings in a neat little plot.
+
+```{r descriptive}
+# Create the function to measure mode
+mode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+# Counting the descriptive statistics
+stat <- plot %>% group_by(year) %>% summarize(
+  mean = mean(fandango),
+  median = median(fandango),
+  mode = mode(fandango)
+)
+
+# Creating a longer dataframe to plot
+stat_long <- stat %>% pivot_longer(cols=mean:mode, names_to = 'metrics',values_to = 'value')
+
+# Plotting
+stat_long %>% ggplot(aes(x = metrics,y = value, fill = year)) +
+  geom_bar(stat = 'identity', position = 'dodge', alpha=0.45) +
+  labs(title = 'Descriptive Statistics of Fandango Ratings \n(2015 vs 2016)')
+```
+
+As we can see from both the graph and the table above, there is a drop in the average stars given by approximately 0.2 stars. There is no change in the median stars given but there is a change in the mode of the stars in which in 2015, most of the movies are given 4.5 stars while the year after it decreased to 4 stars.
+
+## Conclusion
+
+To conclude this whole exercise, we can simply say that there is a decrease in Fandango's star rating from 2015 to 2016. The average decrease is 0.2 stars with the mode of the ratings going down from 4.5 to 4 stars.
+
+But it cannot be said for certain that the decrease is influenced by Hickey's article.
