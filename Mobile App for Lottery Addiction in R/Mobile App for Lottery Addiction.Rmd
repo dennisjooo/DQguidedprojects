@@ -1,0 +1,199 @@
+---
+title: "Mobile App for Lottery Addiction"
+author: "Dennis Jonathan"
+date: "6/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Many people start playing the lottery for fun, but for some this activity turns into a habit which eventually escalates into addiction. Like other compulsive gamblers, lottery addicts soon begin spending from their savings and loans, they start to accumulate debts, and eventually engage in desperate behaviors like theft.
+
+A medical institute that aims to prevent and treat gambling addictions wants to build a dedicated mobile app to help lottery addicts better estimate their chances of winning. The institute has a team of engineers that will build the app, but they need us to create the logical core of the app and calculate probabilities.
+
+For the first version of the app, the institute want to focus on the 6/49 lottery and build functions that enable users to answer questions like:
+
+- What is the probability of winning the big prize with a single ticket?
+- What is the probability of winning the big prize if we play 40 different tickets (or any other number)?
+- What is the probability of having at least five (or four, or three, or two) winning numbers on a single ticket?
+
+```{r prereqs}
+# Importing the libraries necessary
+library(tidyverse)
+
+# Shutting off warning messages
+options(warn=-1)
+```
+
+```{r funcdef}
+# Defining a function to do factorials
+factorial <- function(n){
+  temp <- 1
+  for (i in 1:n){
+    temp = temp*i
+  }
+  temp
+}
+
+# Defining a function to do combination
+combination <- function(n,k){
+  (factorial(n)/(factorial(n-k)*factorial(k)))
+}
+```
+## Probability of a Ticket
+
+We need to build a function that calculates the probability of winning the big prize for any given ticket. For each drawing, six numbers are drawn from a set of 49, and a player wins the big prize if the six numbers on their tickets match all six numbers.
+
+We discussed with the engineering team of the medical institute, and they told us we need to be aware of the following details when we write the function:
+- Inside the app, the user inputs six different numbers from 1 to 49.
+- Under the hood, the six numbers will come as a vector and serve as an input to our function.
+- The engineering team wants the function to print the probability value in a friendly way — in a way that people without any probability training are able to understand.
+
+Below, we write the `one_ticket_probability()` function, which takes in a list of six unique numbers and prints the probability of winning in a way that's easy to understand.
+
+```{r oneticket}
+# Defining a function to count the probability of a ticket
+one_ticket_probability <- function(){
+  temp <- sprintf("%f%%", 100/combination(49,6))
+  paste("You have a ",temp, "% chance of winning the big prize.", sep = "")
+}
+one_ticket_probability()
+```
+To be fair, the function above is just a decoy. The odds of winning it all (getting 6 numbers correctly) is and will always will be 1. The denominator will always be a combination of selecting 6 items out of 49 total items.
+
+## Looking at Historical Data
+The institute also wants us to consider the data coming from the national 6/49 lottery game in Canada. The data set contains historical data for 3,665 drawings, dating from 1982 to 2018 (the data set can be downloaded from [here](https://www.kaggle.com/datascienceai/lottery-dataset)).
+```{r hist_1}
+# Reading the data in
+lott <- read_csv('649.csv')
+
+# Printing the dimension
+print(dim(lott))
+
+# Printing the first 5 rows
+head(lott,5)
+```
+## Function for Historical Data Check
+The engineering team tells us that we need to write a function that can help users determine whether they would have ever won by now using a certain combination of six numbers. These are the details we'll need to be aware of:
+
+- Inside the app, the user inputs six different numbers from 1 to 49.
+- Under the hood, the six numbers will come as a list and serve as an input to our function.
+- The engineering team wants the function to print the probability value in a friendly way — in a way that people without any probability training are able to understand.
+
+### 1. Trial function to extract the data
+```{r hist_tr1}
+# Data structure
+data1 <- c(1, 3, 5)
+data2 <- c(2, 4, 6)
+data3 <- c(8, 9, 7)
+
+# Creating a list out of the datastructure
+unnamed_list <- list(data1,data2,data3)
+
+# Extreacting the first vector
+first_vector <- unnamed_list[[1]]
+
+# Creating a named list
+named_list <-list(first = data1, second = data2, third = data3)
+
+# Tring to extract and sum all the first value from every vectors
+first_item_sum <- named_list$first[1] + named_list$second[1] + named_list$third[1]
+
+# Using pmap to count average
+averages <- pmap(unnamed_list, function(x, y, z) { (x + y + z) / 3 })
+first_average <- unlist(averages)[1]
+```
+### 2. Extracting the numbers into a vector
+```{r hist_2}
+# Extracting the numbers using pmap
+historical_lots <- pmap(
+  list(
+    u <- lott$`NUMBER DRAWN 1`,
+    v <- lott$`NUMBER DRAWN 2`,
+    w <- lott$`NUMBER DRAWN 3`,
+    x <- lott$`NUMBER DRAWN 4`,
+    y <- lott$`NUMBER DRAWN 5`,
+    z <- lott$`NUMBER DRAWN 6`
+  ), 
+  .f <- function(u, v, w, x, y, z) { c(u, v, w, x, y, z) }
+)
+
+
+# Function to check historical data
+check_historical_occurrences <- function(lot, hist_lots = historical_lots) {
+  historical_matches <- map(hist_lots, function(x) {setequal(x, lot)})
+  num_past_matches <- sum(unlist(historical_matches))
+  s <- paste("The combination you entered has appeared ", 
+             num_past_matches, 
+             " times in the past. ",
+             "Your chance of winning the big prize in the next drawing using this combination is 0.0000072%", sep = "")
+  return(s)
+}
+
+# Checking the function
+check_historical_occurrences(c(1, 2, 3, 4, 5, 6))
+```
+## Multiple Ticket Probability
+
+Lottery addicts usually play more than one ticket on a single drawing, thinking that this might increase their chances of winning significantly. Our purpose is to help them better estimate their chances of winning — on this screen, we're going to write a function that will allow the users to calculate the chances of winning for any number of different tickets.
+
+We've talked with the engineering team and they gave us the following information:
+
+- The user will input the number of different tickets they want to play (without inputting the specific combinations they intend to play).
+- Our function will see an integer between 1 and 13,983,816 (the maximum number of different tickets).
+- The function should print information about the probability of winning the big prize depending on the number of different tickets played.
+
+Hence we will write a function called `multi_ticket_probability()` which will do just that.
+```{r mul}
+# Defining a function for multi tickets
+multi_ticket_probability <- function(n) {
+  total_combinations <- combination(49, 6)
+  prob <- (n / total_combinations) * 100
+  pretty_prob <- sprintf("%1.9f", prob)
+  s <- paste("You have a ", pretty_prob, "% chance of winning the big prize.", sep = "")
+  return(s)
+}
+
+# Checking the function
+for (i in c(1, 10, 100, 10000, 1000000, 6991908, 13983816)){
+  print(multi_ticket_probability(i))
+}
+```
+## Checking if User Have 2 to 5 Winning Numbers
+In most 6/49 lotteries, there are smaller prizes if a player's ticket match two, three, four, or five of the six numbers drawn. This means that players might be interested in finding out the probability of having two, three, four, or five winning numbers — for the first version of the app, users should be able to find those probabilities.
+
+These are the details we need to be aware of when we write a function to make the calculations of those probabilities possible:
+
+- Inside the app, the user inputs:
+    - six different numbers from 1 to 49; and
+    - an integer between 2 and 5 that represents the number of winning numbers expected
+- Our function prints information about the probability of having a certain number of winning numbers
+
+To calculate the probabilities, we tell the engineering team that the specific combination on the ticket is irrelevant and we only need the integer between 2 and 5 representing the number of winning numbers expected. Consequently, we will write a function named `probability_less_6()` which takes in an integer and prints information about the chances of winning depending on the value of that integer.
+
+The function below calculates the probability that a player's ticket matches exactly the given number of winning numbers. If the player wants to find out the probability of having five winning numbers, the function will return the probability of having five winning numbers exactly (no more and no less). The function will not return the probability of having at least five winning numbers.
+
+```{r less6}
+# Defining the function
+probability_less_6 <- function(x){
+    n_combinations_ticket = combination(6, n)
+    n_combinations_remaining = combination(49 - n, 6 - n)
+    successful_outcomes = n_combinations_ticket * n_combinations_remaining
+    n_combinations_total = combination(49, 6)
+    
+    prob = (successful_outcomes / n_combinations_total) * 100
+    pretty_prob <- sprintf("%1.9f", prob)
+  
+  s <- paste("you have a ", pretty_prob, "% chance of winning the big prize if you have ", x,' correct combinations',sep = "")
+  return(s)
+}
+
+# Checking the function
+for (n in c(3, 4, 5)) {
+  print(probability_less_6(n))
+}
+```
+## Conclusion
+
+The lotterly has been coined as 'tax for the stupid' or something like that and it showed. The odd's of winning a lottery is so slim, yet people still fantasizes of being that 1 in 10 million of winning it all. It would be wise to not dip one's feet into this.
