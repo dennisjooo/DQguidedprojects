@@ -1,0 +1,160 @@
+---
+title: "Predicting Car Prices"
+author: "Dennis Jonathan"
+date: "7/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We learned about the fundamental process of creating a machine learning using the k-nearest neighbors algorithm. For this guided project, you'll practice this workflow on a completely new dataset and use it to predict a car's market price using its various characteristics, including body style, engine type and horsepower.
+
+you can read more about the dataset [at the UCI Machine Learning Archive](https://archive.ics.uci.edu/ml/datasets/automobile). Since we'll be working in our own RMarkdown file, you'll need to [download the dataset directly](https://archive.ics.uci.edu/ml/machine-learning-databases/autos/imports-85.data) as well.
+
+```{r prerequisite}
+# Importing tidyverse
+library(tidyverse)
+library(caret)
+
+# Shutting off warning messages
+options(warn=-1)
+
+# Importing the dataset
+cars <- read_csv('imports-85.data')
+```
+## Data Exploration
+The column names is not in the correct format so far. One can see that the column names are just the first entry of the dataset. We will need to change it.
+
+```{r renamecol}
+# Renaming the columns
+colnames(cars) <- c(
+  "symboling",
+  "normalized_losses",
+  "make",
+  "fuel_type",
+  "aspiration",
+  "num_doors",
+  "body_style",
+  "drive_wheels",
+  "engine_location",
+  "wheel_base",
+  "length",
+  "width",
+  "height",
+  "curb_weight",
+  "engine_type",
+  "num_cylinders",
+  "engine_size",
+  "fuel_system",
+  "bore",
+  "stroke",
+  "compression_ratio",
+  "horsepower",
+  "peak_rpm",
+  "city_mpg",
+  "highway_mpg",
+  "price"
+)
+
+# Previewing the data
+glimpse(cars)
+```
+We can see that the dataset contains 204 rows and 26 columns. We can also see that the column names have been changed. Now, we will filter the columns which are not numeric and also remove entries which contains the value "?".
+```{r filter}
+# Removing non-numerical columns and removing missing data
+cars <- cars %>% 
+  select(
+    symboling, wheel_base, length, width, height, curb_weight,
+    engine_size, bore, stroke, compression_ratio, horsepower, 
+    peak_rpm, city_mpg, highway_mpg, price
+  ) %>% 
+  filter(
+    stroke != "?",
+    bore != "?",
+    horsepower != "?",
+    peak_rpm != "?",
+    price != "?"
+  ) %>% 
+  mutate(
+    stroke = as.numeric(stroke),
+    bore = as.numeric(bore),
+    horsepower = as.numeric(horsepower),
+    peak_rpm = as.numeric(peak_rpm),
+    price = as.numeric(price)
+  )
+
+# Checking if the changes have been made
+map(cars, typeof)
+```
+After removing the columns which are not numeric and also filtering entries with the value "?", we have reduced the dataset to 194 rows and 15 columns. We can also see that the datatype for the numeric columns is also in the correct form. We will now examine the relationship between the features and thte car price using the function `featureplot()`.
+
+```{r latplot}
+# Creating the plot
+featurePlot(cars, cars$price)
+```
+There are some features which have a positive correlation with `price`, those columns are `horsepower`, `curb weight`, `engine size`, `wheel base`, `length`, and `width`. The features which have negative correlation are `city mpg` and `highway mpg`. Let's now see how the distribution for `price`.
+
+```{r histogram}
+# Plotting the histogram
+ggplot(cars, aes(x = price)) +
+  geom_histogram(fill = "red") +
+  labs(
+    title = "Distribution of prices in cars dataset",
+    x = "Price",
+    y = "Frequency"
+  )
+```
+It looks like there's a reasonably even distirbution of the prices in the dataset, so there are no outliers.
+
+## Train-Test Split
+We will now perform split the data into train and test set using the function `createDataPartition()`. We will use 3/4 of the data for the train set and the rest for the test set.
+
+```{r traintest}
+# Creating the train data index
+train_index <- createDataPartition(cars$price, p = 0.75, list = FALSE)
+
+# Splitting the data
+train <- cars[train_index,]
+
+# Splitting the test data
+test <- cars[-train_index,]
+```
+
+## Cross-Validation and Hyperparameter Setting
+We will now use determine the cross-validation for the model as well as hyperparameter optimization for our model. Because we will be using K-Nearest Neighbour, the parameter we will be optimizing is K (the number of neighbours).
+
+```{r set}
+# 5-fold cross-validation 
+five_fold_control <- trainControl(method = "cv", number = 5)
+
+# Hyperparameter settings
+tuning_grid <- expand.grid(k = 1:20)
+```
+
+## Modelling
+After everything we have been through, now it is time to actually model the dataset. As mentioned above, we will be using K-Nearest Neighbor along with the predefined settings on the section above.
+
+```{r model}
+# KNN modelling
+model <- train(price ~ .,
+               data = train,
+               method = "knn",
+               trControl = five_fold_control,
+               tuneGrid = tuning_grid,
+               preProcess = c("center", "scale")
+               )
+```
+
+## Testing the Model
+We will now use the test set to assess our model. We will use the function `postResample()` to get the error metrics for our model.
+
+```{r eval}
+# Creating a prediction
+prediction <- predict(model, test)
+
+# Evaluating the test set
+postResample(prediction, test$price)
+```
+We can see that we have a high Rsquared score and a Root Mean Squared Error of 2020.54.
