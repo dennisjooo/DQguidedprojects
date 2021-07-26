@@ -44,3 +44,6 @@ Enough jibber-jabber, please enjoy exploring my works :)
 13. [Winning Jeopardy in R](https://github.com/dennisjooo/dq-guided-project/blob/main/Winning%20Jeopardy%20in%20R/Winning%20Jeopardy%20in%20R.Rmd)
 14. [Predicting Condominium Sale Prices](https://github.com/dennisjooo/dq-guided-project/blob/main/Predicting%20Condominium%20Sale%20Prices/Predicting%20Condo%20Sale%20Prices.Rmd)
 15. [Predicting Car Prices in R](https://github.com/dennisjooo/dq-guided-project/blob/main/Predicting%20Car%20Prices%20in%20R/Predicting%20Car%20Prices.Rmd)
+
+## Data Engineer in Python
+1. [Profitable App Profiles for the App Store and Google Play Markets](https://github.com/dennisjooo/dq-guided-project/blob/main/Profitable%20App%20Profiles%20for%20the%20App%20Store%20and%20Google%20Play%20Markets/Profitable%20App%20Profiles%20for%20the%20App%20Store%20and%20Google%20Play%20Markets.ipynb)
