@@ -48,3 +48,4 @@ Enough jibber-jabber, please enjoy exploring my works :)
 ## Data Engineer in Python
 1. [Profitable App Profiles for the App Store and Google Play Markets](https://github.com/dennisjooo/dq-guided-project/blob/main/Profitable%20App%20Profiles%20for%20the%20App%20Store%20and%20Google%20Play%20Markets/Profitable%20App%20Profiles%20for%20the%20App%20Store%20and%20Google%20Play%20Markets.ipynb)
 2. [Exploring Hacker News Posts](https://github.com/dennisjooo/dq-guided-project/blob/main/Exploring%20Hacker%20News%20Posts/Exploring%20Hacker%20News%20Posts.ipynb)
+3. [Building Fast Queries on a CSV](https://github.com/dennisjooo/dq-guided-project/blob/main/Building%20Fast%20Queries%20on%20a%20CSV/Building%20Fast%20Queries%20on%20a%20CSV.ipynb)
